@@ -1050,6 +1050,252 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["webhook_token"],
         },
     ),
+    # =========================================================================
+    # CUSTOM ACTIONS
+    # =========================================================================
+    Tool(
+        name="list_custom_actions",
+        title="List Custom Actions",
+        description=(
+            "List all Custom Actions configured on a webhook token. "
+            "Returns each action's UUID, type, execution order, parameters, and "
+            "enabled/disabled state. Use this to audit the automation rules on a "
+            "webhook before modifying or debugging them."
+        ),
+        annotations=_READONLY,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "webhook_token": {
+                    "type": "string",
+                    "description": "UUID token of the webhook whose Custom Actions to list.",
+                },
+            },
+            "required": ["webhook_token"],
+        },
+    ),
+    Tool(
+        name="create_custom_action",
+        title="Create Custom Action",
+        description=(
+            "Create a new Custom Action on a webhook token. Custom Actions are "
+            "server-side automation rules that fire when the webhook receives a "
+            "request. Supported types include 'condition' (conditional logic), "
+            "'script' (WebhookScript), 'http_request' (HTTP forwarding), 'email', "
+            "'slack', 'discord', 'google_sheets', and many more. The 'parameters' "
+            "object varies by action type — see webhook.site docs for each type's "
+            "schema. Actions execute in 'order' priority (lowest first)."
+        ),
+        annotations=_CREATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "webhook_token": {
+                    "type": "string",
+                    "description": "UUID token of the webhook to add the action to.",
+                },
+                "type": {
+                    "type": "string",
+                    "description": (
+                        "Action type name. Common types: 'condition', 'script', "
+                        "'http_request', 'email', 'slack', 'discord', "
+                        "'google_sheets', 'database_query', 'set_variable', "
+                        "'extract_jsonpath', 'extract_regex', 'modify_response', "
+                        "'rate_limit', 'log'."
+                    ),
+                },
+                "order": {
+                    "type": "integer",
+                    "description": "Execution priority (lower runs first). Default: 0.",
+                    "default": 0,
+                },
+                "parameters": {
+                    "type": "object",
+                    "description": (
+                        "Type-specific configuration object. For 'condition': "
+                        "{input, operator, value, action}. For 'script': {script}. "
+                        "For 'http_request': {url, method, headers, body}. "
+                        "See webhook.site Action Types docs for full schemas."
+                    ),
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "description": "When true, the action is skipped during execution. Default: false.",
+                    "default": False,
+                },
+                "queue": {
+                    "type": "boolean",
+                    "description": "When true, the action runs asynchronously. Default: false.",
+                    "default": False,
+                },
+                "delay": {
+                    "type": "integer",
+                    "description": "Seconds to wait before running (requires queue=true, max 86400).",
+                },
+                "condition": {
+                    "type": "string",
+                    "description": "UUID of a Condition action that gates this action. If the condition fails, this action is skipped.",
+                },
+            },
+            "required": ["webhook_token", "type"],
+        },
+    ),
+    Tool(
+        name="update_custom_action",
+        title="Update Custom Action",
+        description=(
+            "Update an existing Custom Action's configuration. You can change the "
+            "action type, execution order, parameters, disabled state, queue mode, "
+            "delay, and condition gate. Only the fields you provide are sent; omitted "
+            "fields are left to the API's default merge behavior."
+        ),
+        annotations=_UPDATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "webhook_token": {
+                    "type": "string",
+                    "description": "UUID token of the webhook containing the action.",
+                },
+                "action_id": {
+                    "type": "string",
+                    "description": "UUID of the Custom Action to update.",
+                },
+                "type": {
+                    "type": "string",
+                    "description": "New action type name.",
+                },
+                "order": {
+                    "type": "integer",
+                    "description": "New execution priority (lower runs first).",
+                },
+                "parameters": {
+                    "type": "object",
+                    "description": "New type-specific configuration object.",
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "description": "New disabled state.",
+                },
+                "queue": {
+                    "type": "boolean",
+                    "description": "New async execution flag.",
+                },
+                "delay": {
+                    "type": "integer",
+                    "description": "New delay in seconds (requires queue=true, max 86400).",
+                },
+                "condition": {
+                    "type": "string",
+                    "description": "UUID of a Condition action to gate this action.",
+                },
+            },
+            "required": ["webhook_token", "action_id"],
+        },
+    ),
+    Tool(
+        name="delete_custom_action",
+        title="Delete Custom Action",
+        description=(
+            "Permanently delete a Custom Action from a webhook token. The action is "
+            "removed immediately and will no longer fire on incoming requests. "
+            "This is irreversible — use list_custom_actions first to confirm the "
+            "action UUID."
+        ),
+        annotations=_DELETE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "webhook_token": {
+                    "type": "string",
+                    "description": "UUID token of the webhook containing the action.",
+                },
+                "action_id": {
+                    "type": "string",
+                    "description": "UUID of the Custom Action to delete.",
+                },
+            },
+            "required": ["webhook_token", "action_id"],
+        },
+    ),
+    Tool(
+        name="test_custom_action",
+        title="Test Custom Action",
+        description=(
+            "Test a Custom Action with sample request data without saving it to the "
+            "token. Executes the action definition you provide and returns the output, "
+            "modified response, and resulting variables. Optionally base the test on an "
+            "existing captured request and/or overwrite the parameters of an existing "
+            "saved action. Use this to iterate on action logic before committing it."
+        ),
+        annotations=_SEND,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "webhook_token": {
+                    "type": "string",
+                    "description": "UUID token of the webhook to test against.",
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Action type to test (e.g. 'script', 'condition', 'http_request').",
+                },
+                "order": {
+                    "type": "integer",
+                    "description": "Execution order for the test run. Default: 0.",
+                    "default": 0,
+                },
+                "parameters": {
+                    "type": "object",
+                    "description": "Type-specific configuration to test (e.g. {script: \"echo('hello')\"} for WebhookScript).",
+                },
+                "request_id": {
+                    "type": "string",
+                    "description": "UUID of a captured request to use as test input. If omitted, uses default request variables.",
+                },
+                "action_id": {
+                    "type": "string",
+                    "description": "UUID of an existing action whose parameters to overwrite for this test run.",
+                },
+            },
+            "required": ["webhook_token", "type"],
+        },
+    ),
+    Tool(
+        name="execute_custom_actions",
+        title="Execute Custom Actions on Request",
+        description=(
+            "Execute all Custom Actions configured on a webhook token against a "
+            "specific captured request. Runs every enabled action in order and returns "
+            "their combined output, any modified response, and resulting variables. "
+            "Use this to replay automation on past traffic or re-trigger actions after "
+            "updating their configuration."
+        ),
+        annotations=_SEND,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "webhook_token": {
+                    "type": "string",
+                    "description": "UUID token of the webhook whose actions to execute.",
+                },
+                "request_id": {
+                    "type": "string",
+                    "description": "UUID of the captured request to run actions against.",
+                },
+                "error_notifications": {
+                    "type": "boolean",
+                    "description": "When true, sends an email notification if an error occurs during execution. Default: false.",
+                    "default": False,
+                },
+            },
+            "required": ["webhook_token", "request_id"],
+        },
+    ),
+
+    # =========================================================================
+    # SECURITY TESTING / BUG BOUNTY
+    # =========================================================================
     Tool(
         name="generate_canary_token",
         title="Generate Canary Token",

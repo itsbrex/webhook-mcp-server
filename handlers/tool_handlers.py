@@ -16,6 +16,7 @@ from models.schemas import WebhookConfig, SearchFilters, DeleteFilters, ToolResu
 from services.webhook_service import WebhookService
 from services.request_service import RequestService
 from services.bugbounty_service import BugBountyService
+from services.custom_actions_service import CustomActionsService
 from utils.http_client import WebhookHttpClient, WebhookApiError
 from utils.logger import setup_logger
 from utils.validation import ValidationError
@@ -41,6 +42,7 @@ class ToolHandler:
         self._webhook_service = WebhookService(client)
         self._request_service = RequestService(client)
         self._bugbounty_service = BugBountyService(client)
+        self._custom_actions_service = CustomActionsService(client)
         self._logger = setup_logger(__name__)
     
     async def handle(
@@ -127,6 +129,13 @@ class ToolHandler:
             # Batch & utility tools
             "send_multiple_requests": self._handle_send_multiple_requests,
             "export_webhook_data": self._handle_export_webhook_data,
+            # Custom Actions (Phase 2)
+            "list_custom_actions": self._handle_list_custom_actions,
+            "create_custom_action": self._handle_create_custom_action,
+            "update_custom_action": self._handle_update_custom_action,
+            "delete_custom_action": self._handle_delete_custom_action,
+            "test_custom_action": self._handle_test_custom_action,
+            "execute_custom_actions": self._handle_execute_custom_actions,
         }
         return handlers.get(name)
     
@@ -452,4 +461,73 @@ class ToolHandler:
         return await self._request_service.export_requests(
             webhook_token=arguments["webhook_token"],
             limit=arguments.get("limit", 100),
+        )
+
+    # =========================================================================
+    # CUSTOM ACTIONS HANDLERS (Phase 2)
+    # =========================================================================
+
+    async def _handle_list_custom_actions(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle list_custom_actions tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._custom_actions_service.list_actions(
+            webhook_token=arguments["webhook_token"],
+        )
+
+    async def _handle_create_custom_action(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle create_custom_action tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._custom_actions_service.create_action(
+            webhook_token=arguments["webhook_token"],
+            action_type=arguments["type"],
+            order=arguments.get("order", 0),
+            parameters=arguments.get("parameters"),
+            disabled=arguments.get("disabled", False),
+            queue=arguments.get("queue", False),
+            delay=arguments.get("delay"),
+            condition=arguments.get("condition"),
+        )
+
+    async def _handle_update_custom_action(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle update_custom_action tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._custom_actions_service.update_action(
+            webhook_token=arguments["webhook_token"],
+            action_id=arguments["action_id"],
+            action_type=arguments.get("type"),
+            order=arguments.get("order"),
+            parameters=arguments.get("parameters"),
+            disabled=arguments.get("disabled"),
+            queue=arguments.get("queue"),
+            delay=arguments.get("delay"),
+            condition=arguments.get("condition"),
+        )
+
+    async def _handle_delete_custom_action(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle delete_custom_action tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._custom_actions_service.delete_action(
+            webhook_token=arguments["webhook_token"],
+            action_id=arguments["action_id"],
+        )
+
+    async def _handle_test_custom_action(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle test_custom_action tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._custom_actions_service.test_action(
+            webhook_token=arguments["webhook_token"],
+            action_type=arguments["type"],
+            order=arguments.get("order", 0),
+            parameters=arguments.get("parameters"),
+            request_id=arguments.get("request_id"),
+            action_id=arguments.get("action_id"),
+        )
+
+    async def _handle_execute_custom_actions(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle execute_custom_actions tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._custom_actions_service.execute_actions(
+            webhook_token=arguments["webhook_token"],
+            request_id=arguments["request_id"],
+            error_notifications=arguments.get("error_notifications", False),
         )
