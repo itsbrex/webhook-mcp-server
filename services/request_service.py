@@ -757,6 +757,62 @@ class RequestService:
             }
         )
     
+    async def set_dynamic_response(
+        self,
+        webhook_token: str,
+        request_id: str,
+        status: int = 200,
+        content: str = "",
+        content_type: str = "text/plain",
+        headers: dict[str, Any] | None = None,
+    ) -> ToolResult:
+        """Set the dynamic response for a specific incoming request.
+
+        Only works when the webhook token has listen > 0. The webhook
+        holds the caller's connection open until this response is provided.
+        Content is base64-encoded before sending, as required by the API.
+
+        Args:
+            webhook_token: The webhook UUID (must have listen > 0)
+            request_id: The request UUID to respond to
+            status: HTTP status code (200-599)
+            content: Response body (plain text, will be base64-encoded)
+            content_type: Content-Type header value
+            headers: Additional response headers
+
+        Returns:
+            ToolResult confirming the response was set
+        """
+        import base64
+
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("ascii")
+
+        response_headers = headers or {}
+        response_headers["Content-Type"] = content_type
+
+        payload = {
+            "status": status,
+            "content": encoded_content,
+            "headers": response_headers,
+        }
+
+        data = await self._client.put(
+            f"/token/{webhook_token}/requests/{request_id}/response",
+            json_data=payload,
+        )
+
+        return ToolResult(
+            success=True,
+            message=f"Dynamic response set (status: {status}, {len(content)} chars)",
+            data={
+                "webhook_token": webhook_token,
+                "request_id": request_id,
+                "status": status,
+                "content_type": content_type,
+                "content_length": len(content),
+            },
+        )
+
     @staticmethod
     def _extract_header(req: dict[str, Any], header_name: str) -> str:
         """Extract a header value from a request."""

@@ -1296,6 +1296,278 @@ TOOL_DEFINITIONS: list[Tool] = [
     # =========================================================================
     # SECURITY TESTING / BUG BOUNTY
     # =========================================================================
+    # =========================================================================
+    # GLOBAL VARIABLES
+    # =========================================================================
+    Tool(
+        name="list_global_variables",
+        title="List Global Variables",
+        description=(
+            "List all global variables for the authenticated user. "
+            "Global variables persist across all webhooks and schedules, making them "
+            "ideal for shared configuration (API keys, base URLs, counters). "
+            "Returns each variable's UUID, name, value, and created/updated timestamps. "
+            "Requires an API key."
+        ),
+        annotations=_READONLY,
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    Tool(
+        name="create_global_variable",
+        title="Create Global Variable",
+        description=(
+            "Create a new global variable that persists across all webhooks and schedules. "
+            "Variables are accessible in Custom Actions and WebhookScript via $variable.name$ "
+            "syntax. Use this for shared configuration like API keys, base URLs, environment "
+            "flags, or counters that multiple webhooks need to reference."
+        ),
+        annotations=_CREATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Variable name (used as $variable.name$ in scripts and actions).",
+                },
+                "value": {
+                    "type": "string",
+                    "description": "Variable value (string).",
+                },
+            },
+            "required": ["name", "value"],
+        },
+    ),
+    Tool(
+        name="update_global_variable",
+        title="Update Global Variable",
+        description=(
+            "Update the name or value of an existing global variable. "
+            "Changes take effect immediately for all webhooks and schedules that "
+            "reference this variable. Use list_global_variables to find the variable UUID."
+        ),
+        annotations=_UPDATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "variable_id": {
+                    "type": "string",
+                    "description": "UUID of the global variable to update.",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "New variable name.",
+                },
+                "value": {
+                    "type": "string",
+                    "description": "New variable value.",
+                },
+            },
+            "required": ["variable_id"],
+        },
+    ),
+    Tool(
+        name="delete_global_variable",
+        title="Delete Global Variable",
+        description=(
+            "Permanently delete a global variable. Any webhooks or schedules referencing "
+            "this variable via $variable.name$ will receive an empty value after deletion. "
+            "This action is irreversible. Use list_global_variables to confirm the UUID."
+        ),
+        annotations=_DELETE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "variable_id": {
+                    "type": "string",
+                    "description": "UUID of the global variable to delete.",
+                },
+            },
+            "required": ["variable_id"],
+        },
+    ),
+
+    # =========================================================================
+    # SCHEDULES
+    # =========================================================================
+    Tool(
+        name="list_schedules",
+        title="List Schedules",
+        description=(
+            "List all scheduled tasks for the authenticated user. "
+            "Schedules are cron-based HTTP requests that run on a timer — useful for "
+            "health checks, periodic API polling, data sync jobs, or keep-alive pings. "
+            "Returns each schedule's UUID, name, interval, target URL, method, and "
+            "enabled state. Requires an API key."
+        ),
+        annotations=_READONLY,
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    Tool(
+        name="create_schedule",
+        title="Create Schedule",
+        description=(
+            "Create a new scheduled task that sends HTTP requests on a timer. "
+            "Supports preset intervals (monthly, weekly, daily, hourly, 10-minute, "
+            "5-minute, 1-minute) or custom cron expressions. Each execution sends an "
+            "HTTP request to the specified URL with optional headers and body. "
+            "Use this for uptime monitoring, periodic API calls, or automated data pushes."
+        ),
+        annotations=_CREATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Human-readable name for the schedule.",
+                },
+                "interval": {
+                    "type": "string",
+                    "description": (
+                        "Execution frequency. Presets: 'monthly', 'weekly', 'daily', "
+                        "'hourly', '10-minute', '5-minute', '1-minute'. "
+                        "Or use 'cron' and provide a cron expression in the 'cron' parameter."
+                    ),
+                },
+                "cron": {
+                    "type": "string",
+                    "description": "Custom cron expression (e.g. '0 */2 * * *' for every 2 hours). Only used when interval is 'cron'.",
+                },
+                "request_url": {
+                    "type": "string",
+                    "description": "Target URL to send the scheduled request to.",
+                },
+                "request_method": {
+                    "type": "string",
+                    "description": "HTTP method for the scheduled request. Default: GET.",
+                    "default": "GET",
+                },
+                "request_body": {
+                    "type": "string",
+                    "description": "Request body for POST/PUT/PATCH requests.",
+                },
+                "request_headers": {
+                    "type": "string",
+                    "description": "Request headers as newline-separated 'Key: Value' pairs.",
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Request timeout in seconds (1-30). Default: 10.",
+                    "default": 10,
+                },
+            },
+            "required": ["name", "request_url"],
+        },
+    ),
+    Tool(
+        name="run_schedule_now",
+        title="Run Schedule Now",
+        description=(
+            "Trigger immediate execution of a scheduled task, bypassing its normal timer. "
+            "The request is sent to the schedule's configured URL with its headers and body. "
+            "Use this to test a schedule configuration or force a run outside its normal cycle."
+        ),
+        annotations=_SEND,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schedule_id": {
+                    "type": "string",
+                    "description": "UUID of the schedule to run immediately.",
+                },
+            },
+            "required": ["schedule_id"],
+        },
+    ),
+    Tool(
+        name="get_schedule_logs",
+        title="Get Schedule Logs",
+        description=(
+            "Retrieve execution logs for a scheduled task. Each log entry includes "
+            "the execution timestamp, HTTP status code, response body, and whether the "
+            "run succeeded or failed. Use this to debug schedule failures or verify "
+            "that scheduled requests are landing correctly."
+        ),
+        annotations=_READONLY,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schedule_id": {
+                    "type": "string",
+                    "description": "UUID of the schedule whose logs to retrieve.",
+                },
+                "sorting": {
+                    "type": "string",
+                    "description": "Sort order: 'newest' (default) or 'oldest'.",
+                    "default": "newest",
+                },
+            },
+            "required": ["schedule_id"],
+        },
+    ),
+
+    # =========================================================================
+    # DYNAMIC RESPONSE
+    # =========================================================================
+    Tool(
+        name="set_dynamic_response",
+        title="Set Dynamic Response",
+        description=(
+            "Dynamically set the HTTP response for a specific incoming request. "
+            "Only works when the webhook token has 'listen' > 0, which causes the "
+            "webhook to hold the caller's connection open until you provide a response "
+            "via this endpoint. The content is automatically base64-encoded before sending. "
+            "Use this for programmatic request/response flows — e.g., a mock API that "
+            "inspects the request and returns a tailored response, or an approval workflow "
+            "that holds a webhook call until a human decides."
+        ),
+        annotations=_UPDATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "webhook_token": {
+                    "type": "string",
+                    "description": "UUID token of the webhook (must have listen > 0).",
+                },
+                "request_id": {
+                    "type": "string",
+                    "description": "UUID of the incoming request to respond to.",
+                },
+                "status": {
+                    "type": "integer",
+                    "description": "HTTP status code to return to the caller (200-599). Default: 200.",
+                    "default": 200,
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Response body to return to the caller (plain text — will be base64-encoded automatically).",
+                    "default": "",
+                },
+                "content_type": {
+                    "type": "string",
+                    "description": "Content-Type header for the response. Default: text/plain.",
+                    "default": "text/plain",
+                },
+                "headers": {
+                    "type": "object",
+                    "description": "Additional response headers as key-value pairs.",
+                    "default": {},
+                },
+            },
+            "required": ["webhook_token", "request_id"],
+        },
+    ),
+
+    # =========================================================================
+    # SECURITY TESTING / BUG BOUNTY
+    # =========================================================================
     Tool(
         name="generate_canary_token",
         title="Generate Canary Token",

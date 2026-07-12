@@ -17,6 +17,8 @@ from services.webhook_service import WebhookService
 from services.request_service import RequestService
 from services.bugbounty_service import BugBountyService
 from services.custom_actions_service import CustomActionsService
+from services.global_variables_service import GlobalVariablesService
+from services.schedules_service import SchedulesService
 from utils.http_client import WebhookHttpClient, WebhookApiError
 from utils.logger import setup_logger
 from utils.validation import ValidationError
@@ -43,6 +45,8 @@ class ToolHandler:
         self._request_service = RequestService(client)
         self._bugbounty_service = BugBountyService(client)
         self._custom_actions_service = CustomActionsService(client)
+        self._global_variables_service = GlobalVariablesService(client)
+        self._schedules_service = SchedulesService(client)
         self._logger = setup_logger(__name__)
     
     async def handle(
@@ -136,6 +140,18 @@ class ToolHandler:
             "delete_custom_action": self._handle_delete_custom_action,
             "test_custom_action": self._handle_test_custom_action,
             "execute_custom_actions": self._handle_execute_custom_actions,
+            # Global Variables (Phase 3)
+            "list_global_variables": self._handle_list_global_variables,
+            "create_global_variable": self._handle_create_global_variable,
+            "update_global_variable": self._handle_update_global_variable,
+            "delete_global_variable": self._handle_delete_global_variable,
+            # Schedules (Phase 3)
+            "list_schedules": self._handle_list_schedules,
+            "create_schedule": self._handle_create_schedule,
+            "run_schedule_now": self._handle_run_schedule_now,
+            "get_schedule_logs": self._handle_get_schedule_logs,
+            # Dynamic Response (Phase 3)
+            "set_dynamic_response": self._handle_set_dynamic_response,
         }
         return handlers.get(name)
     
@@ -530,4 +546,85 @@ class ToolHandler:
             webhook_token=arguments["webhook_token"],
             request_id=arguments["request_id"],
             error_notifications=arguments.get("error_notifications", False),
+        )
+
+    # =========================================================================
+    # GLOBAL VARIABLES HANDLERS (Phase 3)
+    # =========================================================================
+
+    async def _handle_list_global_variables(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle list_global_variables tool."""
+        _ = arguments  # No arguments needed
+        return await self._global_variables_service.list_variables()
+
+    async def _handle_create_global_variable(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle create_global_variable tool."""
+        return await self._global_variables_service.create_variable(
+            name=arguments["name"],
+            value=arguments["value"],
+        )
+
+    async def _handle_update_global_variable(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle update_global_variable tool."""
+        return await self._global_variables_service.update_variable(
+            variable_id=arguments["variable_id"],
+            name=arguments.get("name"),
+            value=arguments.get("value"),
+        )
+
+    async def _handle_delete_global_variable(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle delete_global_variable tool."""
+        return await self._global_variables_service.delete_variable(
+            variable_id=arguments["variable_id"],
+        )
+
+    # =========================================================================
+    # SCHEDULES HANDLERS (Phase 3)
+    # =========================================================================
+
+    async def _handle_list_schedules(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle list_schedules tool."""
+        _ = arguments  # No arguments needed
+        return await self._schedules_service.list_schedules()
+
+    async def _handle_create_schedule(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle create_schedule tool."""
+        return await self._schedules_service.create_schedule(
+            name=arguments["name"],
+            request_url=arguments["request_url"],
+            interval=arguments.get("interval"),
+            cron=arguments.get("cron"),
+            request_method=arguments.get("request_method", "GET"),
+            request_body=arguments.get("request_body"),
+            request_headers=arguments.get("request_headers"),
+            timeout=arguments.get("timeout", 10),
+        )
+
+    async def _handle_run_schedule_now(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle run_schedule_now tool."""
+        return await self._schedules_service.run_now(
+            schedule_id=arguments["schedule_id"],
+        )
+
+    async def _handle_get_schedule_logs(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle get_schedule_logs tool."""
+        return await self._schedules_service.get_logs(
+            schedule_id=arguments["schedule_id"],
+            sorting=arguments.get("sorting", "newest"),
+        )
+
+    # =========================================================================
+    # DYNAMIC RESPONSE HANDLER (Phase 3)
+    # =========================================================================
+
+    async def _handle_set_dynamic_response(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle set_dynamic_response tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._request_service.set_dynamic_response(
+            webhook_token=arguments["webhook_token"],
+            request_id=arguments["request_id"],
+            status=arguments.get("status", 200),
+            content=arguments.get("content", ""),
+            content_type=arguments.get("content_type", "text/plain"),
+            headers=arguments.get("headers"),
         )
