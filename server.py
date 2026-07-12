@@ -19,13 +19,19 @@ Architecture:
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 # Add project root to path for imports
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+# Load .env from project root
+load_dotenv(PROJECT_ROOT / ".env")
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -67,7 +73,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     Returns:
         List of TextContent responses
     """
-    async with WebhookHttpClient() as client:
+    api_key = os.environ.get("WEBHOOK_SITE_API_KEY")
+    async with WebhookHttpClient(api_key=api_key) as client:
         handler = ToolHandler(client)
         return await handler.handle(name, arguments)
 

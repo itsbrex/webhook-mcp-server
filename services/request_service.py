@@ -493,6 +493,158 @@ class RequestService:
             }
         )
     
+    async def get_raw_request(
+        self,
+        webhook_token: str,
+        request_id: str,
+    ) -> ToolResult:
+        """Get the raw, unprocessed body of a captured request.
+
+        Returns the original content with its native Content-Type,
+        not wrapped in JSON.
+
+        Args:
+            webhook_token: The webhook UUID
+            request_id: The request UUID
+
+        Returns:
+            ToolResult with raw body text and content type
+        """
+        response = await self._client.get_raw(
+            f"/token/{webhook_token}/request/{request_id}/raw"
+        )
+
+        content_type = response.headers.get("content-type", "application/octet-stream")
+
+        return ToolResult(
+            success=True,
+            message=f"Raw request body retrieved ({len(response.text)} chars, {content_type})",
+            data={
+                "request_id": request_id,
+                "content_type": content_type,
+                "body": response.text,
+                "size_bytes": len(response.content),
+            },
+        )
+
+    async def export_requests_csv(
+        self,
+        webhook_token: str,
+    ) -> ToolResult:
+        """Export all captured requests as CSV (up to 100,000 rows).
+
+        Uses the native webhook.site CSV export endpoint.
+
+        Args:
+            webhook_token: The webhook UUID
+
+        Returns:
+            ToolResult with CSV content as text
+        """
+        response = await self._client.get_raw(
+            f"/token/{webhook_token}/requests/export"
+        )
+
+        csv_text = response.text
+        row_count = max(csv_text.count("\n") - 1, 0)  # subtract header row
+
+        return ToolResult(
+            success=True,
+            message=f"Exported {row_count} requests as CSV",
+            data={
+                "webhook_token": webhook_token,
+                "row_count": row_count,
+                "csv": csv_text,
+            },
+        )
+
+    async def download_request_file(
+        self,
+        webhook_token: str,
+        request_id: str,
+        file_id: str,
+    ) -> ToolResult:
+        """Download a file attachment from a captured request.
+
+        Args:
+            webhook_token: The webhook UUID
+            request_id: The request UUID containing the file
+            file_id: The file attachment ID
+
+        Returns:
+            ToolResult with file content, filename, and MIME type
+        """
+        response = await self._client.get_raw(
+            f"/token/{webhook_token}/request/{request_id}/download/{file_id}"
+        )
+
+        content_type = response.headers.get("content-type", "application/octet-stream")
+
+        # Try to extract filename from Content-Disposition header
+        content_disp = response.headers.get("content-disposition", "")
+        filename = "unknown"
+        if "filename=" in content_disp:
+            parts = content_disp.split("filename=")
+            if len(parts) > 1:
+                filename = parts[1].strip().strip('"')
+
+        # For text-safe content, return as text; otherwise note it's binary
+        is_text = content_type.startswith("text/") or content_type in (
+            "application/json",
+            "application/xml",
+            "application/csv",
+        )
+
+        return ToolResult(
+            success=True,
+            message=f"Downloaded file '{filename}' ({content_type}, {len(response.content)} bytes)",
+            data={
+                "file_id": file_id,
+                "filename": filename,
+                "content_type": content_type,
+                "size_bytes": len(response.content),
+                "content": response.text if is_text else f"[binary data, {len(response.content)} bytes]",
+            },
+        )
+
+    async def update_request_note(
+        self,
+        webhook_token: str,
+        request_id: str,
+        note: str,
+    ) -> ToolResult:
+        """Update the note field on a captured request.
+
+        Args:
+            webhook_token: The webhook UUID
+            request_id: The request UUID to annotate
+            note: Note text (max 10,000 characters)
+
+        Returns:
+            ToolResult confirming the update
+        """
+        if len(note) > 10_000:
+            return ToolResult(
+                success=False,
+                message=f"Note too long: {len(note)} chars (max 10,000)",
+                data={"length": len(note)},
+            )
+
+        data = await self._client.put(
+            f"/token/{webhook_token}/request/{request_id}",
+            json_data={"note": note},
+        )
+
+        return ToolResult(
+            success=True,
+            message="Request note updated successfully",
+            data={
+                "request_id": request_id,
+                "note": note,
+                "note_length": len(note),
+            },
+        )
+
     async def send_multiple(
         self,
         webhook_token: str,

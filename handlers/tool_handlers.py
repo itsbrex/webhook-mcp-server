@@ -112,6 +112,12 @@ class ToolHandler:
             "get_webhook_dns": self._handle_get_webhook_dns,
             "wait_for_request": self._handle_wait_for_request,
             "wait_for_email": self._handle_wait_for_email,
+            # Phase 1 new tools
+            "list_tokens": self._handle_list_tokens,
+            "get_raw_request": self._handle_get_raw_request,
+            "export_requests_csv": self._handle_export_requests_csv,
+            "download_request_file": self._handle_download_request_file,
+            "update_request_note": self._handle_update_request_note,
             # Bug bounty tools
             "generate_ssrf_payload": self._handle_generate_ssrf_payload,
             "check_for_callbacks": self._handle_check_for_callbacks,
@@ -179,6 +185,12 @@ class ToolHandler:
         if "expiry" in arguments and arguments["expiry"] is not None:
             validate_expiry(arguments["expiry"])
         
+        if "listen" in arguments and arguments["listen"] is not None:
+            validate_positive_int(arguments["listen"], "listen", min_val=0, max_val=10)
+
+        if "request_limit" in arguments and arguments["request_limit"] is not None:
+            validate_positive_int(arguments["request_limit"], "request_limit", min_val=0, max_val=10000)
+
         config = WebhookConfig(
             default_status=arguments.get("default_status"),
             default_content=arguments.get("default_content"),
@@ -187,6 +199,11 @@ class ToolHandler:
             cors=arguments.get("cors"),
             alias=arguments.get("alias"),
             expiry=arguments.get("expiry"),
+            listen=arguments.get("listen"),
+            request_limit=arguments.get("request_limit"),
+            actions=arguments.get("actions"),
+            clone_from=arguments.get("clone_from"),
+            group_id=arguments.get("group_id"),
         )
         return await self._webhook_service.create_with_config(config)
     
@@ -323,6 +340,48 @@ class ToolHandler:
             webhook_token=arguments["webhook_token"],
             timeout_seconds=arguments.get("timeout_seconds", 60),
             extract_links=arguments.get("extract_links", True),
+        )
+
+    # =========================================================================
+    # PHASE 1 NEW TOOL HANDLERS
+    # =========================================================================
+
+    async def _handle_list_tokens(self, arguments: dict[str, Any]):
+        """Handle list_tokens tool."""
+        _ = arguments  # No arguments needed
+        return await self._webhook_service.list_tokens()
+
+    async def _handle_get_raw_request(self, arguments: dict[str, Any]):
+        """Handle get_raw_request tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._request_service.get_raw_request(
+            webhook_token=arguments["webhook_token"],
+            request_id=arguments["request_id"],
+        )
+
+    async def _handle_export_requests_csv(self, arguments: dict[str, Any]):
+        """Handle export_requests_csv tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._request_service.export_requests_csv(
+            webhook_token=arguments["webhook_token"],
+        )
+
+    async def _handle_download_request_file(self, arguments: dict[str, Any]):
+        """Handle download_request_file tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._request_service.download_request_file(
+            webhook_token=arguments["webhook_token"],
+            request_id=arguments["request_id"],
+            file_id=arguments["file_id"],
+        )
+
+    async def _handle_update_request_note(self, arguments: dict[str, Any]):
+        """Handle update_request_note tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
+        return await self._request_service.update_request_note(
+            webhook_token=arguments["webhook_token"],
+            request_id=arguments["request_id"],
+            note=arguments["note"],
         )
 
     # =========================================================================

@@ -82,6 +82,37 @@ class WebhookService:
                 data=None
             )
     
+    async def list_tokens(self) -> ToolResult:
+        """List all webhook tokens for the authenticated user.
+
+        Requires an API key to be configured on the HTTP client.
+
+        Returns:
+            ToolResult with array of token objects
+        """
+        data = await self._client.get("/token")
+
+        tokens = data.get("data", []) if isinstance(data, dict) else data
+        formatted = []
+        for t in tokens:
+            formatted.append({
+                "uuid": t.get("uuid"),
+                "alias": t.get("alias"),
+                "url": f"{WEBHOOK_SITE_API}/{t.get('alias') or t.get('uuid')}",
+                "default_status": t.get("default_status"),
+                "default_content_type": t.get("default_content_type"),
+                "cors": t.get("cors"),
+                "requests_count": t.get("requests"),
+                "created_at": t.get("created_at"),
+                "expires_at": t.get("expires_at"),
+            })
+
+        return ToolResult(
+            success=True,
+            message=f"Found {len(formatted)} webhook(s)",
+            data={"total": len(formatted), "tokens": formatted},
+        )
+
     async def create(self) -> ToolResult:
         """Create a new webhook with default settings.
         

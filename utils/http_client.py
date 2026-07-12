@@ -227,6 +227,41 @@ class WebhookHttpClient:
         except httpx.RequestError as e:
             raise WebhookApiError(f"DELETE request failed: {str(e)}") from e
     
+    async def get_raw(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+    ) -> httpx.Response:
+        """Perform GET request and return the full Response without JSON parsing.
+
+        Use this for endpoints that return non-JSON content (raw text, CSV, binary files).
+
+        Args:
+            path: API path (e.g., "/token/{id}/request/{rid}/raw")
+            params: Query parameters
+
+        Returns:
+            Full httpx Response object (access .text, .content, .headers as needed)
+
+        Raises:
+            WebhookApiError: On HTTP or API errors
+        """
+        try:
+            response = await self.client.get(
+                self._build_url(path),
+                params=params,
+            )
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as e:
+            raise WebhookApiError(
+                f"GET {path} failed: {e.response.status_code}",
+                status_code=e.response.status_code,
+                response_body=e.response.text,
+            ) from e
+        except httpx.RequestError as e:
+            raise WebhookApiError(f"GET raw request failed: {str(e)}") from e
+
     async def post_raw(
         self,
         url: str,

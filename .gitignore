@@ -49,3 +49,6 @@ Thumbs.db
 .env.local
 plan/
 server.json
+
+# Crawled API docs (local reference only)
+context/
