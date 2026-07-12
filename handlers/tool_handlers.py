@@ -19,6 +19,9 @@ from services.bugbounty_service import BugBountyService
 from services.custom_actions_service import CustomActionsService
 from services.global_variables_service import GlobalVariablesService
 from services.schedules_service import SchedulesService
+from services.databases_service import DatabasesService
+from services.groups_service import GroupsService
+from services.templates_service import TemplatesService
 from utils.http_client import WebhookHttpClient, WebhookApiError
 from utils.logger import setup_logger
 from utils.validation import ValidationError
@@ -47,6 +50,9 @@ class ToolHandler:
         self._custom_actions_service = CustomActionsService(client)
         self._global_variables_service = GlobalVariablesService(client)
         self._schedules_service = SchedulesService(client)
+        self._databases_service = DatabasesService(client)
+        self._groups_service = GroupsService(client)
+        self._templates_service = TemplatesService(client)
         self._logger = setup_logger(__name__)
     
     async def handle(
@@ -152,6 +158,22 @@ class ToolHandler:
             "get_schedule_logs": self._handle_get_schedule_logs,
             # Dynamic Response (Phase 3)
             "set_dynamic_response": self._handle_set_dynamic_response,
+            # Databases (Phase 4)
+            "query_database": self._handle_query_database,
+            "create_database": self._handle_create_database,
+            "list_databases": self._handle_list_databases,
+            "update_database": self._handle_update_database,
+            "delete_database": self._handle_delete_database,
+            # Groups (Phase 4)
+            "list_groups": self._handle_list_groups,
+            "create_group": self._handle_create_group,
+            "update_group": self._handle_update_group,
+            "delete_group": self._handle_delete_group,
+            # Templates (Phase 4)
+            "list_templates": self._handle_list_templates,
+            "create_template": self._handle_create_template,
+            "update_template": self._handle_update_template,
+            "delete_template": self._handle_delete_template,
         }
         return handlers.get(name)
     
@@ -627,4 +649,103 @@ class ToolHandler:
             content=arguments.get("content", ""),
             content_type=arguments.get("content_type", "text/plain"),
             headers=arguments.get("headers"),
+        )
+
+    # =========================================================================
+    # DATABASES HANDLERS (Phase 4)
+    # =========================================================================
+
+    async def _handle_query_database(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle query_database tool."""
+        return await self._databases_service.query_database(
+            database_id=arguments["database_id"],
+            query=arguments["query"],
+            params=arguments.get("params"),
+        )
+
+    async def _handle_create_database(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle create_database tool."""
+        return await self._databases_service.create_database(
+            name=arguments["name"],
+            plan=arguments.get("plan", "db-s"),
+            group_id=arguments.get("group_id"),
+        )
+
+    async def _handle_list_databases(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle list_databases tool."""
+        _ = arguments  # No arguments needed
+        return await self._databases_service.list_databases()
+
+    async def _handle_update_database(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle update_database tool."""
+        return await self._databases_service.update_database(
+            database_id=arguments["database_id"],
+            name=arguments.get("name"),
+            group_id=arguments.get("group_id"),
+        )
+
+    async def _handle_delete_database(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle delete_database tool."""
+        return await self._databases_service.delete_database(
+            database_id=arguments["database_id"],
+        )
+
+    # =========================================================================
+    # GROUPS HANDLERS (Phase 4)
+    # =========================================================================
+
+    async def _handle_list_groups(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle list_groups tool."""
+        _ = arguments  # No arguments needed
+        return await self._groups_service.list_groups()
+
+    async def _handle_create_group(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle create_group tool."""
+        return await self._groups_service.create_group(
+            name=arguments["name"],
+        )
+
+    async def _handle_update_group(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle update_group tool."""
+        return await self._groups_service.update_group(
+            group_id=arguments["group_id"],
+            name=arguments["name"],
+        )
+
+    async def _handle_delete_group(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle delete_group tool."""
+        return await self._groups_service.delete_group(
+            group_id=arguments["group_id"],
+        )
+
+    # =========================================================================
+    # TEMPLATES HANDLERS (Phase 4)
+    # =========================================================================
+
+    async def _handle_list_templates(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle list_templates tool."""
+        _ = arguments  # No arguments needed
+        return await self._templates_service.list_templates()
+
+    async def _handle_create_template(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle create_template tool."""
+        return await self._templates_service.create_template(
+            name=arguments["name"],
+            actions=arguments.get("actions"),
+            variables=arguments.get("variables"),
+        )
+
+    async def _handle_update_template(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle update_template tool."""
+        return await self._templates_service.update_template(
+            template_id=arguments["template_id"],
+            name=arguments.get("name"),
+            actions=arguments.get("actions"),
+            variables=arguments.get("variables"),
+        )
+
+    async def _handle_delete_template(self, arguments: dict[str, Any]) -> ToolResult:
+        """Handle delete_template tool."""
+        return await self._templates_service.delete_template(
+            template_id=arguments["template_id"],
         )

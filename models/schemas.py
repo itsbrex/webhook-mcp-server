@@ -1600,4 +1600,338 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["webhook_token"],
         },
     ),
+
+    # =========================================================================
+    # DATABASES (Phase 4)
+    # =========================================================================
+    Tool(
+        name="query_database",
+        title="Run Database Query",
+        description=(
+            "Run a SQL query against a webhook.site built-in PostgreSQL database. "
+            "Supports both positional (?) and named (:param) parameter binding for "
+            "safe query execution. Returns up to 1,000 rows along with execution time. "
+            "Use this to read, insert, update, or delete data in your webhook.site database."
+        ),
+        annotations=_SEND,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "database_id": {
+                    "type": "string",
+                    "description": "UUID of the database to run the query against.",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "SQL query string. Use ? for positional params or :name for named params.",
+                },
+                "params": {
+                    "description": (
+                        "Query parameters for safe binding. Use an array for positional (?) "
+                        "params or an object for named (:param) params."
+                    ),
+                },
+            },
+            "required": ["database_id", "query"],
+        },
+    ),
+    Tool(
+        name="create_database",
+        title="Create Database",
+        description=(
+            "Create a new webhook.site built-in PostgreSQL database. "
+            "Each database is a fully managed PostgreSQL instance you can query "
+            "via the API or from Custom Actions. Choose a plan size (db-s, db-m, db-l) "
+            "based on your storage needs. Optionally assign it to a group for organization."
+        ),
+        annotations=_CREATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Human-readable name for the database.",
+                },
+                "plan": {
+                    "type": "string",
+                    "description": "Database plan size: 'db-s' (small), 'db-m' (medium), or 'db-l' (large).",
+                    "enum": ["db-s", "db-m", "db-l"],
+                    "default": "db-s",
+                },
+                "group_id": {
+                    "type": "integer",
+                    "description": "Numeric ID of the group to assign this database to.",
+                },
+            },
+            "required": ["name"],
+        },
+    ),
+    Tool(
+        name="list_databases",
+        title="List Databases",
+        description=(
+            "List all webhook.site databases owned by the authenticated user. "
+            "Returns each database's UUID, name, plan, storage usage (bytes_used), "
+            "and table count. Requires an API key. Use this to inventory your databases "
+            "or find a specific database ID before running queries."
+        ),
+        annotations=_READONLY,
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    Tool(
+        name="update_database",
+        title="Update Database",
+        description=(
+            "Update the metadata of an existing webhook.site database. "
+            "You can change the database name and group assignment. "
+            "Use list_databases to find the database UUID first."
+        ),
+        annotations=_UPDATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "database_id": {
+                    "type": "string",
+                    "description": "UUID of the database to update.",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "New database name.",
+                },
+                "group_id": {
+                    "type": "integer",
+                    "description": "New group ID to assign the database to.",
+                },
+            },
+            "required": ["database_id"],
+        },
+    ),
+    Tool(
+        name="delete_database",
+        title="Delete Database",
+        description=(
+            "Permanently delete a webhook.site database and all its tables and data. "
+            "This action is irreversible. The database will stop accepting queries "
+            "immediately. Use list_databases to confirm the UUID before deleting."
+        ),
+        annotations=_DELETE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "database_id": {
+                    "type": "string",
+                    "description": "UUID of the database to permanently delete.",
+                },
+            },
+            "required": ["database_id"],
+        },
+    ),
+
+    # =========================================================================
+    # GROUPS (Phase 4)
+    # =========================================================================
+    Tool(
+        name="list_groups",
+        title="List Groups",
+        description=(
+            "List all groups for the authenticated user. Groups organize webhook "
+            "tokens into logical containers in the dashboard. Returns each group's "
+            "UUID, name, and timestamps. Requires an API key. Use this to find group "
+            "IDs for assigning webhooks or databases to groups."
+        ),
+        annotations=_READONLY,
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    Tool(
+        name="create_group",
+        title="Create Group",
+        description=(
+            "Create a new group for organizing webhook tokens in the dashboard. "
+            "Groups act as folders that let you categorize related webhooks together. "
+            "After creating a group, assign webhooks to it using create_webhook_with_config "
+            "or update the group_id on existing resources."
+        ),
+        annotations=_CREATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name for the new group.",
+                },
+            },
+            "required": ["name"],
+        },
+    ),
+    Tool(
+        name="update_group",
+        title="Update Group",
+        description=(
+            "Rename an existing group. The group continues to contain all its "
+            "currently assigned webhooks. Use list_groups to find the group UUID."
+        ),
+        annotations=_UPDATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "group_id": {
+                    "type": "string",
+                    "description": "UUID of the group to update.",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "New name for the group.",
+                },
+            },
+            "required": ["group_id", "name"],
+        },
+    ),
+    Tool(
+        name="delete_group",
+        title="Delete Group",
+        description=(
+            "Permanently delete a group. Webhooks that were assigned to this group "
+            "will become ungrouped but are not deleted. This action is irreversible. "
+            "Use list_groups to confirm the UUID before deleting."
+        ),
+        annotations=_DELETE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "group_id": {
+                    "type": "string",
+                    "description": "UUID of the group to delete.",
+                },
+            },
+            "required": ["group_id"],
+        },
+    ),
+
+    # =========================================================================
+    # TEMPLATES (Phase 4)
+    # =========================================================================
+    Tool(
+        name="list_templates",
+        title="List Templates",
+        description=(
+            "List all templates for the authenticated user. Templates are reusable "
+            "sets of Custom Actions and variables that can be applied when creating "
+            "new webhook tokens. Returns each template's UUID, name, actions, variables, "
+            "and timestamps. Requires an API key."
+        ),
+        annotations=_READONLY,
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    Tool(
+        name="create_template",
+        title="Create Template",
+        description=(
+            "Create a new template with a set of reusable Custom Actions and variables. "
+            "Templates let you define automation rules once and apply them to multiple "
+            "webhook tokens. The actions array follows the same schema as create_custom_action. "
+            "Variables are name-value pairs available to actions via $variable.name$ syntax."
+        ),
+        annotations=_CREATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Human-readable name for the template.",
+                },
+                "actions": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                    "description": (
+                        "Array of action definitions. Each object follows the same schema as "
+                        "create_custom_action (type, order, parameters, etc.)."
+                    ),
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "value": {"type": "string"},
+                        },
+                    },
+                    "description": "Array of variable definitions ({name, value}) available to template actions.",
+                },
+            },
+            "required": ["name"],
+        },
+    ),
+    Tool(
+        name="update_template",
+        title="Update Template",
+        description=(
+            "Update an existing template's name, actions, or variables. "
+            "Only the fields you provide are updated; omitted fields keep their "
+            "current values. Use list_templates to find the template UUID."
+        ),
+        annotations=_UPDATE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "template_id": {
+                    "type": "string",
+                    "description": "UUID of the template to update.",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "New template name.",
+                },
+                "actions": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                    "description": "New array of action definitions (replaces existing actions).",
+                },
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "value": {"type": "string"},
+                        },
+                    },
+                    "description": "New array of variable definitions (replaces existing variables).",
+                },
+            },
+            "required": ["template_id"],
+        },
+    ),
+    Tool(
+        name="delete_template",
+        title="Delete Template",
+        description=(
+            "Permanently delete a template. Webhook tokens that were created from "
+            "this template retain their actions and variables, but the template itself "
+            "is removed and can no longer be used. This action is irreversible."
+        ),
+        annotations=_DELETE,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "template_id": {
+                    "type": "string",
+                    "description": "UUID of the template to delete.",
+                },
+            },
+            "required": ["template_id"],
+        },
+    ),
 ]
