@@ -1,0 +1,285 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "webhook.site API",
+    "version": "2026-10-10",
+    "description": "Hand-authored OpenAPI 3.1 description of the webhook.site REST API endpoints consumed by webhook-mcp-server. webhook.site does not publish a machine-readable spec; this file is maintained from https://docs.webhook.site and is used as a typing/reference source. Rate limits noted per endpoint reflect the free tier.",
+    "contact": { "name": "webhook.site docs", "url": "https://docs.webhook.site" }
+  },
+  "servers": [{ "url": "https://webhook.site" }],
+  "security": [{ "ApiKey": [] }, {}],
+  "components": {
+    "securitySchemes": {
+      "ApiKey": { "type": "apiKey", "in": "header", "name": "Api-Key", "description": "Required only for account-linked resources (token list, databases, global variables, schedules, groups, templates). Public endpoints work unauthenticated." }
+    },
+    "parameters": {
+      "tokenId": { "name": "tokenId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Token UUID (aliases are not accepted in API URLs)." },
+      "requestId": { "name": "requestId", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Request UUID, or the literal 'latest'." }
+    },
+    "schemas": {
+      "TokenConfig": {
+        "type": "object",
+        "properties": {
+          "default_status": { "type": "integer", "minimum": 200, "maximum": 599, "default": 200 },
+          "default_content": { "type": "string", "default": "" },
+          "default_content_type": { "type": "string", "default": "text/html" },
+          "timeout": { "type": "integer", "minimum": 0, "maximum": 30, "default": 0 },
+          "listen": { "type": "integer", "minimum": 0, "maximum": 10, "default": 0 },
+          "expiry": { "type": "integer", "minimum": 0, "maximum": 604800, "default": 604800 },
+          "request_limit": { "type": "integer", "minimum": 0, "maximum": 10000, "default": 10000 },
+          "cors": { "type": "boolean", "default": false },
+          "alias": { "type": "string", "pattern": "^[a-zA-Z0-9-_]{3,32}$", "nullable": true },
+          "actions": { "type": "boolean", "default": true },
+          "clone_from": { "type": "string", "format": "uuid", "nullable": true },
+          "group_id": { "type": "integer", "nullable": true }
+        }
+      },
+      "Token": {
+        "type": "object",
+        "properties": {
+          "uuid": { "type": "string", "format": "uuid" },
+          "alias": { "type": ["string", "null"] },
+          "default_status": { "type": "integer" },
+          "default_content": { "type": "string" },
+          "default_content_type": { "type": "string" },
+          "timeout": { "type": "integer" },
+          "cors": { "type": "boolean" },
+          "premium": { "type": ["boolean", "null"] },
+          "created_at": { "type": "string" },
+          "updated_at": { "type": "string" },
+          "expires_at": { "type": ["string", "null"] }
+        }
+      },
+      "Request": {
+        "type": "object",
+        "properties": {
+          "uuid": { "type": "string" },
+          "type": { "type": "string", "enum": ["web", "email", "dns"] },
+          "method": { "type": "string" },
+          "content": { "type": ["string", "null"] },
+          "text_content": { "type": ["string", "null"] },
+          "html_content": { "type": ["string", "null"] },
+          "headers": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
+          "query": { "type": "object" },
+          "ip": { "type": "string" },
+          "url": { "type": "string" },
+          "note": { "type": ["string", "null"] },
+          "created_at": { "type": "string" }
+        }
+      },
+      "RequestList": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Request" } },
+          "total": { "type": "integer" },
+          "per_page": { "type": "integer" },
+          "current_page": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/token": {
+      "post": {
+        "operationId": "createToken",
+        "summary": "Create token",
+        "description": "Rate limit: 10/min (free), 60/min (Pro/Enterprise).",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenConfig" } } } },
+        "responses": { "200": { "description": "Created token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Token" } } } } }
+      },
+      "get": {
+        "operationId": "listTokens",
+        "summary": "List tokens",
+        "security": [{ "ApiKey": [] }],
+        "parameters": [
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 100 } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "order_by", "in": "query", "schema": { "type": "string", "enum": ["created_at", "token_id"], "default": "created_at" } },
+          { "name": "order_direction", "in": "query", "schema": { "type": "string", "enum": ["asc", "desc"], "default": "asc" } }
+        ],
+        "responses": { "200": { "description": "Token list" } }
+      }
+    },
+    "/token/{tokenId}": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }],
+      "get": { "operationId": "getToken", "summary": "Get token", "responses": { "200": { "description": "Token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Token" } } } }, "404": { "description": "Not found or expired" } } },
+      "put": { "operationId": "updateToken", "summary": "Update token", "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenConfig" } } } }, "responses": { "200": { "description": "Updated token" } } },
+      "delete": { "operationId": "deleteToken", "summary": "Delete token", "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/token/{tokenId}/requests": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }],
+      "get": {
+        "operationId": "getRequests",
+        "summary": "Get requests",
+        "description": "Rate limit: 120 req/min.",
+        "parameters": [
+          { "name": "sorting", "in": "query", "schema": { "type": "string", "enum": ["newest", "oldest"], "default": "oldest" } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 100 } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string" }, "description": "yyyy-MM-dd HH:mm:ss" },
+          { "name": "date_to", "in": "query", "schema": { "type": "string" }, "description": "yyyy-MM-dd HH:mm:ss" },
+          { "name": "query", "in": "query", "schema": { "type": "string" }, "description": "Lucene-style search, e.g. 'type:web AND method:POST'." }
+        ],
+        "responses": { "200": { "description": "Request page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestList" } } } } }
+      }
+    },
+    "/token/{tokenId}/requests/export": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }],
+      "get": { "operationId": "exportRequestsCsv", "summary": "Export requests to CSV", "description": "Rate limit: 3/min. Max 10000 rows (100000 with per_page).", "responses": { "200": { "description": "CSV", "content": { "text/csv": { "schema": { "type": "string" } } } } } }
+    },
+    "/token/{tokenId}/request/{requestId}": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }, { "$ref": "#/components/parameters/requestId" }],
+      "get": { "operationId": "getRequest", "summary": "Get single/latest request", "responses": { "200": { "description": "Request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Request" } } } } } },
+      "delete": { "operationId": "deleteRequest", "summary": "Delete request", "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/token/{tokenId}/request/{requestId}/raw": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }, { "$ref": "#/components/parameters/requestId" }],
+      "get": { "operationId": "getRawRequest", "summary": "Get raw request body", "responses": { "200": { "description": "Raw body with native Content-Type" } } }
+    },
+    "/token/{tokenId}/request/{requestId}/download/{fileId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/tokenId" },
+        { "$ref": "#/components/parameters/requestId" },
+        { "name": "fileId", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "get": { "operationId": "downloadRequestFile", "summary": "Download request file attachment", "description": "Responds with a 302 redirect to the file; clients must follow redirects.", "responses": { "200": { "description": "File content" }, "302": { "description": "Redirect to file" } } }
+    },
+    "/token/{tokenId}/requests/{requestId}": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }, { "$ref": "#/components/parameters/requestId" }],
+      "put": {
+        "operationId": "updateRequest",
+        "summary": "Update request (note only)",
+        "description": "Note the PLURAL '/requests/' path here, unlike GET/DELETE single-request which use singular '/request/'.",
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "note": { "type": "string", "maxLength": 10000 } } } } } },
+        "responses": { "200": { "description": "Updated request" } }
+      }
+    },
+    "/token/{tokenId}/requests/{requestId}/response": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }, { "$ref": "#/components/parameters/requestId" }],
+      "put": {
+        "operationId": "setResponse",
+        "summary": "Set dynamic response",
+        "description": "For tokens with listen > 0. Content must be base64-encoded.",
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["content"], "properties": { "content": { "type": "string", "description": "base64-encoded body" }, "status": { "type": "integer", "default": 200 }, "headers": { "type": "object" } } } } } },
+        "responses": { "200": { "description": "Response set" } }
+      }
+    },
+    "/token/{tokenId}/request": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }],
+      "delete": {
+        "operationId": "deleteRequests",
+        "summary": "Delete multiple requests",
+        "description": "Rate limit: 10/min. Example: ?date_to=now-7d.",
+        "parameters": [
+          { "name": "date_from", "in": "query", "schema": { "type": "string" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string" } },
+          { "name": "query", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "Deleted" } }
+      }
+    },
+    "/token/{tokenId}/actions": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }],
+      "get": { "operationId": "listActions", "summary": "List custom actions", "responses": { "200": { "description": "Actions" } } },
+      "post": {
+        "operationId": "createAction",
+        "summary": "Create custom action",
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["type"], "properties": { "type": { "type": "string" }, "order": { "type": "integer" }, "parameters": { "type": "object" }, "disabled": { "type": "boolean" }, "queue": { "type": "boolean" }, "delay": { "type": "integer", "maximum": 86400 }, "condition": { "type": "string", "format": "uuid" } } } } } },
+        "responses": { "200": { "description": "Created action" } }
+      }
+    },
+    "/token/{tokenId}/actions/{actionId}": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }, { "name": "actionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "put": { "operationId": "updateAction", "summary": "Update custom action", "responses": { "200": { "description": "Updated action" } } },
+      "delete": { "operationId": "deleteAction", "summary": "Delete custom action", "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/token/{tokenId}/test-action": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }],
+      "post": {
+        "operationId": "testAction",
+        "summary": "Test a custom action",
+        "parameters": [
+          { "name": "request_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "action_id", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Test result with output, response, variables" } }
+      }
+    },
+    "/token/{tokenId}/request/{requestId}/execute": {
+      "parameters": [{ "$ref": "#/components/parameters/tokenId" }, { "$ref": "#/components/parameters/requestId" }],
+      "post": {
+        "operationId": "executeActions",
+        "summary": "Execute all custom actions for a request",
+        "parameters": [{ "name": "error_notifications", "in": "query", "schema": { "type": "boolean" } }],
+        "responses": { "200": { "description": "Execution result" } }
+      }
+    },
+    "/databases": {
+      "post": {
+        "operationId": "createDatabase",
+        "summary": "Create database",
+        "security": [{ "ApiKey": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name", "plan"], "properties": { "name": { "type": "string" }, "plan": { "type": "string", "enum": ["db-s", "db-m", "db-l"] }, "group_id": { "type": "integer" } } } } } },
+        "responses": { "200": { "description": "Created database" } }
+      }
+    },
+    "/database": {
+      "get": { "operationId": "listDatabases", "summary": "List databases (note singular path)", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Databases with bytes_used, tables_used" } } }
+    },
+    "/databases/{databaseId}": {
+      "parameters": [{ "name": "databaseId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "put": { "operationId": "updateDatabase", "summary": "Update database", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Updated database" } } },
+      "delete": { "operationId": "deleteDatabase", "summary": "Delete database", "security": [{ "ApiKey": [] }], "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/databases/{databaseId}/query": {
+      "parameters": [{ "name": "databaseId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "post": {
+        "operationId": "queryDatabase",
+        "summary": "Run SQL query",
+        "security": [{ "ApiKey": [] }],
+        "description": "Supports named (:name) and positional (?) params. Max 1000 results.",
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["query"], "properties": { "query": { "type": "string" }, "params": { "oneOf": [{ "type": "array" }, { "type": "object" }] } } } } } },
+        "responses": { "200": { "description": "result array, error (string|null), time (ms float)" } }
+      }
+    },
+    "/global-variables": {
+      "get": { "operationId": "listGlobalVariables", "summary": "List global variables", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Variables" } } },
+      "post": { "operationId": "createGlobalVariable", "summary": "Create global variable", "security": [{ "ApiKey": [] }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name", "value"], "properties": { "name": { "type": "string" }, "value": { "type": "string" } } } } } }, "responses": { "200": { "description": "Created" } } }
+    },
+    "/global-variables/{variableId}": {
+      "parameters": [{ "name": "variableId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "put": { "operationId": "updateGlobalVariable", "summary": "Update global variable", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Updated" } } },
+      "delete": { "operationId": "deleteGlobalVariable", "summary": "Delete global variable", "security": [{ "ApiKey": [] }], "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/schedules": {
+      "get": { "operationId": "listSchedules", "summary": "List schedules", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Schedules" } } },
+      "post": { "operationId": "createSchedule", "summary": "Create schedule", "security": [{ "ApiKey": [] }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name", "request_url"], "properties": { "name": { "type": "string" }, "request_url": { "type": "string" }, "interval": { "type": "string" }, "cron": { "type": "string" }, "request_method": { "type": "string", "default": "GET" }, "request_body": { "type": "string" }, "request_headers": { "type": "string" }, "timeout": { "type": "integer", "minimum": 1, "maximum": 30, "default": 10 } } } } } }, "responses": { "200": { "description": "Created" } } }
+    },
+    "/schedules/{scheduleId}/run-now": {
+      "parameters": [{ "name": "scheduleId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "post": { "operationId": "runScheduleNow", "summary": "Run schedule immediately", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Triggered" } } }
+    },
+    "/schedules/{scheduleId}/logs": {
+      "parameters": [{ "name": "scheduleId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "get": { "operationId": "getScheduleLogs", "summary": "Get schedule logs", "security": [{ "ApiKey": [] }], "parameters": [{ "name": "sorting", "in": "query", "schema": { "type": "string", "enum": ["newest", "oldest"] } }], "responses": { "200": { "description": "Logs" } } }
+    },
+    "/groups": {
+      "get": { "operationId": "listGroups", "summary": "List groups", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Groups" } } },
+      "post": { "operationId": "createGroup", "summary": "Create group", "security": [{ "ApiKey": [] }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } } } } }, "responses": { "200": { "description": "Created" } } }
+    },
+    "/groups/{groupId}": {
+      "parameters": [{ "name": "groupId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "put": { "operationId": "updateGroup", "summary": "Update group", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Updated" } } },
+      "delete": { "operationId": "deleteGroup", "summary": "Delete group", "security": [{ "ApiKey": [] }], "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/templates": {
+      "get": { "operationId": "listTemplates", "summary": "List templates", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Templates" } } },
+      "post": { "operationId": "createTemplate", "summary": "Create template", "security": [{ "ApiKey": [] }], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" }, "actions": { "type": "array" }, "variables": { "type": "array" } } } } } }, "responses": { "200": { "description": "Created" } } }
+    },
+    "/templates/{templateId}": {
+      "parameters": [{ "name": "templateId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+      "put": { "operationId": "updateTemplate", "summary": "Update template", "security": [{ "ApiKey": [] }], "responses": { "200": { "description": "Updated" } } },
+      "delete": { "operationId": "deleteTemplate", "summary": "Delete template", "security": [{ "ApiKey": [] }], "responses": { "204": { "description": "Deleted" } } }
+    }
+  }
+}
