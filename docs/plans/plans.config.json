@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "accent": "oklch(0.85 0.16 165)",
+  "accentHue": 165,
+  "accentName": "mint",
+  "nextSeq": 1,
+  "createdAt": "2026-07-17T22:27:52Z",
+  "appName": "webhook-mcp-server"
+}

@@ -1,0 +1,34 @@
+{
+  "load_variables_from": [],
+  "manual_call_templates": [
+    {
+      "call_template_type": "mcp",
+      "config": {
+        "mcpServers": {
+          "webhook-site": {
+            "command": "/Users/hack/.local/share/mise/shims/uv",
+            "args": [
+              "--directory",
+              "/Users/hack/github/webhook-mcp-server",
+              "run",
+              "python",
+              "server.py"
+            ],
+            "env": {
+              "WEBHOOK_SITE_API_KEY": "${WEBHOOK_SITE_API_KEY}"
+            },
+            "transport": "stdio"
+          }
+        }
+      },
+      "name": "webhook-site"
+    }
+  ],
+  "post_processing": [],
+  "tool_repository": {
+    "tool_repository_type": "in_memory"
+  },
+  "tool_search_strategy": {
+    "tool_search_strategy_type": "tag_and_description_word_match"
+  }
+}

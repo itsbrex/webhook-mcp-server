@@ -52,3 +52,14 @@ server.json
 
 # Crawled API docs (local reference only)
 context/
+
+# Local agent/runtime state (transient — not for version control)
+.claude/state/
+.claude/feedback/
+.claude/orchestration/
+.claude/hooks/logs/
+.claude/logs/
+.claude/*.consumed
+.cresaone/
+.specstory/
+.instance/

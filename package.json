@@ -1,0 +1,13 @@
+{
+  "name": "webhook-mcp-server",
+  "version": "3.0.0",
+  "description": "56 MCP tools for the complete webhook.site API",
+  "scripts": {
+    "install:mcp": "bash scripts/install-mcp.sh",
+    "docs": "open docs/index.html",
+    "docs:serve": "python3 -m http.server 8080 --directory docs",
+    "deploy": "bash -c 'SKILL_DIR=\"\"; if [ -d \"$HOME/.claude/skills/cresa-one\" ]; then SKILL_DIR=\"$HOME/.claude/skills/cresa-one\"; elif [ -d \"/Users/hack/.claude/skills/cresa-one\" ]; then SKILL_DIR=\"/Users/hack/.claude/skills/cresa-one\"; fi; $SKILL_DIR/scripts/publish.sh docs --slug webhook-mcp --title \"webhook-mcp-server\" --description \"56 MCP tools for the complete webhook.site API\" --og-image-path /og.png --tags [\"mcp\",\"webhook\",\"api\",\"tools\",\"webhook-site\"] --client claude'",
+    "deploy:update": "bash -c 'SKILL_DIR=\"\"; if [ -d \"$HOME/.claude/skills/cresa-one\" ]; then SKILL_DIR=\"$HOME/.claude/skills/cresa-one\"; elif [ -d \"/Users/hack/.claude/skills/cresa-one\" ]; then SKILL_DIR=\"/Users/hack/.claude/skills/cresa-one\"; fi; $SKILL_DIR/scripts/publish.sh docs --slug webhook-mcp --title \"webhook-mcp-server\" --description \"56 MCP tools for the complete webhook.site API\" --og-image-path /og.png --tags [\"mcp\",\"webhook\",\"api\",\"tools\",\"webhook-site\"] --client claude'",
+    "plans": "bun scripts/plans.mjs"
+  }
+}

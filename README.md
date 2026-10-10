@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/webhook-mcp-server.svg)](https://pypi.org/project/webhook-mcp-server/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![MCP](https://img.shields.io/badge/MCP-23%20tools-brightgreen.svg)](https://modelcontextprotocol.io/)
+[![MCP](https://img.shields.io/badge/MCP-56%20tools-brightgreen.svg)](https://modelcontextprotocol.io/)
 
 A Model Context Protocol (MCP) server for [webhook.site](https://webhook.site) - instantly capture HTTP requests, emails, and DNS lookups. Perfect for testing webhooks, debugging API callbacks, security testing, and bug bounty hunting.
 
@@ -27,19 +27,85 @@ A Model Context Protocol (MCP) server for [webhook.site](https://webhook.site) -
 
 ## Quick Start
 
-### Installation
+### One-command install (recommended)
+
+Use [`mcp-add`](https://github.com/paoloricciuti/mcp-add) to auto-register this
+server with your AI client(s) — Claude Code, Claude Desktop, Cursor, VS Code,
+Windsurf, and more. No config files to hand-edit.
 
 ```bash
-# Using uvx (recommended - no install needed)
-uvx webhook-mcp-server
-
-# Or install via pip
-pip install webhook-mcp-server
+# Published release, added to Claude Code, no install needed:
+npx mcp-add \
+  --name webhook \
+  --type stdio \
+  --command "uvx webhook-mcp-server" \
+  --scope global \
+  --clients "claude code"
 ```
 
-### VS Code / GitHub Copilot
+Run `npx mcp-add` with no flags for a fully interactive walkthrough (it will
+prompt for clients, scope, and any environment variables).
 
-Add to `.vscode/mcp.json`:
+#### Guided installer (asks for the optional API key)
+
+This repo ships a wrapper that only asks what matters — where to run the server
+from, and your **optional** webhook.site API key (paid accounts only; press
+Enter to skip on the free tier):
+
+```bash
+# From a clone of this repo:
+npm run install:mcp
+# or directly:
+./scripts/install-mcp.sh
+```
+
+The installer lets you choose between the **published release** and your
+**local dev checkout** (see below), then calls `mcp-add` for you. Non-interactive
+usage for CI/scripts:
+
+```bash
+# Published, default clients, skip prompts:
+./scripts/install-mcp.sh --published --yes
+
+# Local dev checkout + paid API key, into Cursor + Claude Code:
+./scripts/install-mcp.sh --local --clients "claude code, cursor" --api-key "$WEBHOOK_SITE_API_KEY"
+```
+
+Flags: `--local` / `--published`, `--name`, `--scope global|project`,
+`--clients "<csv>"`, `--api-key <key>` (or `MCP_API_KEY` env), `--no-sync`,
+`--yes`, `--help`.
+
+### Local development install
+
+Point your client at **this checkout** so your live edits are what runs — ideal
+while developing new tools. `uv run --directory` executes the current source on
+every launch.
+
+```bash
+git clone https://github.com/zebbern/webhook-mcp-server.git
+cd webhook-mcp-server
+uv sync                      # install deps into a local .venv
+
+# Wire it into your client(s):
+./scripts/install-mcp.sh --local
+```
+
+That registers this command with your client:
+
+```jsonc
+{
+  "command": "uv",
+  "args": ["run", "--directory", "/abs/path/to/webhook-mcp-server", "python", "server.py"]
+}
+```
+
+Prefer a manual entry? Use the block above in any client config, substituting
+the absolute path to your clone.
+
+### Manual configuration
+
+<details>
+<summary>VS Code / GitHub Copilot — <code>.vscode/mcp.json</code></summary>
 
 ```json
 {
@@ -52,10 +118,10 @@ Add to `.vscode/mcp.json`:
   }
 }
 ```
+</details>
 
-### Claude Desktop
-
-Add to `claude_desktop_config.json`:
+<details>
+<summary>Claude Desktop — <code>claude_desktop_config.json</code></summary>
 
 ```json
 {
@@ -67,6 +133,17 @@ Add to `claude_desktop_config.json`:
   }
 }
 ```
+</details>
+
+Or install the package directly: `uvx webhook-mcp-server` (no install) /
+`pip install webhook-mcp-server`.
+
+### API key (optional)
+
+A webhook.site API key is only needed for **paid** accounts (custom domains,
+higher rate limits, private tokens). The server reads it from the
+`WEBHOOK_SITE_API_KEY` environment variable and runs fine without it. For local
+dev, copy `.env.example` to `.env` and set the key there.
 
 ---
 
