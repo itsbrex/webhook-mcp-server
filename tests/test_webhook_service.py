@@ -119,7 +119,7 @@ async def test_get_url():
     async with WebhookHttpClient() as client:
         service = WebhookService(client)
         
-        result = service.get_url("test-token-123")
+        result = await service.get_url("test-token-123")
         
         assert result.success is True
         assert result.data["token"] == "test-token-123"
@@ -132,7 +132,7 @@ async def test_get_email():
     async with WebhookHttpClient() as client:
         service = WebhookService(client)
         
-        result = service.get_email("test-token-123")
+        result = await service.get_email("test-token-123")
         
         assert result.success is True
         assert result.data["token"] == "test-token-123"
@@ -146,7 +146,7 @@ async def test_get_dns():
     async with WebhookHttpClient() as client:
         service = WebhookService(client)
         
-        result = service.get_dns("test-token-123")
+        result = await service.get_dns("test-token-123")
         
         assert result.success is True
         assert result.data["token"] == "test-token-123"

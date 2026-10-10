@@ -7,6 +7,7 @@ timeout configuration, and consistent header management.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import httpx
@@ -18,6 +19,16 @@ DEFAULT_HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json",
 }
+
+# Rate-limit / transient-failure retry policy.
+# webhook.site enforces per-endpoint rate limits (e.g. 120/min on requests,
+# 10/min on token creation and bulk delete, 3/min on CSV export) and returns
+# HTTP 429 with a Retry-After header when exceeded. Transient 5xx responses and
+# connection errors are also retried with exponential backoff.
+MAX_RETRIES = 3
+RETRY_BACKOFF_BASE = 0.5  # seconds; doubled each attempt
+MAX_RETRY_AFTER = 30.0    # cap honored Retry-After wait so a tool never hangs
+RETRY_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 
 
 class WebhookApiError(Exception):
@@ -78,6 +89,9 @@ class WebhookHttpClient:
         self._client = httpx.AsyncClient(
             timeout=self.timeout,
             headers=headers,
+            # webhook.site returns 302/304 redirects for file downloads; without
+            # this, download_request_file would receive an empty redirect body.
+            follow_redirects=True,
         )
         return self
     
@@ -98,6 +112,53 @@ class WebhookHttpClient:
         """Build full URL from path."""
         path = path.lstrip("/")
         return f"{self.base_url}/{path}"
+
+    @staticmethod
+    def _parse_retry_after(response: httpx.Response, attempt: int) -> float:
+        """Determine how long to wait before retrying.
+
+        Honors the server's Retry-After header (seconds form) on 429, capped at
+        MAX_RETRY_AFTER. Falls back to exponential backoff otherwise.
+        """
+        retry_after = response.headers.get("Retry-After")
+        if retry_after:
+            try:
+                return min(float(retry_after), MAX_RETRY_AFTER)
+            except ValueError:
+                pass  # HTTP-date form is uncommon here; fall through to backoff
+        return RETRY_BACKOFF_BASE * (2 ** attempt)
+
+    async def _send(
+        self,
+        method: str,
+        url: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Send a request, retrying on rate limits and transient failures.
+
+        Retries HTTP 429 (honoring Retry-After) and transient 5xx responses, as
+        well as connection errors, up to MAX_RETRIES times with exponential
+        backoff. Does not call raise_for_status(); callers decide how to handle
+        the final response.
+        """
+        last_error: httpx.RequestError | None = None
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                response = await self.client.request(method, url, **kwargs)
+            except httpx.RequestError as e:
+                last_error = e
+                if attempt >= MAX_RETRIES:
+                    raise
+                await asyncio.sleep(RETRY_BACKOFF_BASE * (2 ** attempt))
+                continue
+
+            if response.status_code in RETRY_STATUS_CODES and attempt < MAX_RETRIES:
+                await asyncio.sleep(self._parse_retry_after(response, attempt))
+                continue
+            return response
+
+        # Unreachable: loop either returns or raises, but satisfies type checker.
+        raise WebhookApiError(f"Request failed after retries: {last_error}")
     
     async def get(
         self,
@@ -117,7 +178,8 @@ class WebhookHttpClient:
             WebhookApiError: On HTTP or API errors
         """
         try:
-            response = await self.client.get(
+            response = await self._send(
+                "GET",
                 self._build_url(path),
                 params=params,
             )
@@ -152,7 +214,8 @@ class WebhookHttpClient:
             WebhookApiError: On HTTP or API errors
         """
         try:
-            response = await self.client.post(
+            response = await self._send(
+                "POST",
                 self._build_url(path),
                 json=json_data,
                 headers=headers,
@@ -186,7 +249,8 @@ class WebhookHttpClient:
             WebhookApiError: On HTTP or API errors
         """
         try:
-            response = await self.client.put(
+            response = await self._send(
+                "PUT",
                 self._build_url(path),
                 json=json_data,
             )
@@ -219,7 +283,8 @@ class WebhookHttpClient:
             WebhookApiError: On HTTP or API errors
         """
         try:
-            response = await self.client.delete(
+            response = await self._send(
+                "DELETE",
                 self._build_url(path),
                 params=params,
             )
@@ -247,7 +312,8 @@ class WebhookHttpClient:
             WebhookApiError: On HTTP or API errors
         """
         try:
-            response = await self.client.get(
+            response = await self._send(
+                "GET",
                 self._build_url(path),
                 params=params,
             )
@@ -284,7 +350,8 @@ class WebhookHttpClient:
             WebhookApiError: On HTTP or API errors
         """
         try:
-            response = await self.client.post(
+            response = await self._send(
+                "POST",
                 url,
                 json=json,
                 headers=headers,

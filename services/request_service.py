@@ -55,7 +55,7 @@ class RequestService:
         Returns:
             ToolResult with list of requests
         """
-        params = {"per_page": limit}
+        params: dict[str, Any] = {"per_page": limit}
         if request_type:
             params["query"] = f"type:{request_type}"
         
@@ -630,8 +630,11 @@ class RequestService:
                 data={"length": len(note)},
             )
 
+        # NOTE: webhook.site's "Update Request" endpoint is the plural
+        # /requests/{id} path (unlike GET/DELETE single-request, which are
+        # singular /request/{id}). Using the singular path here 404s.
         data = await self._client.put(
-            f"/token/{webhook_token}/request/{request_id}",
+            f"/token/{webhook_token}/requests/{request_id}",
             json_data={"note": note},
         )
 
