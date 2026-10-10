@@ -55,7 +55,9 @@ class RequestService:
         Returns:
             ToolResult with list of requests
         """
-        params: dict[str, Any] = {"per_page": limit}
+        # webhook.site defaults to oldest-first; this tool documents
+        # "most recent first", so request newest explicitly.
+        params: dict[str, Any] = {"per_page": limit, "sorting": "newest"}
         if request_type:
             params["query"] = f"type:{request_type}"
         
@@ -123,13 +125,15 @@ class RequestService:
         Returns:
             ToolResult with latest request or None
         """
+        # webhook.site defaults to oldest-first; force newest so this truly
+        # returns the most recent request rather than the first ever captured.
         data = await self._client.get(
             f"/token/{webhook_token}/requests",
-            params={"per_page": 1},
+            params={"per_page": 1, "sorting": "newest"},
         )
-        
+
         requests_data = data.get("data", [])
-        
+
         if not requests_data:
             return ToolResult(
                 success=True,
@@ -351,7 +355,7 @@ class RequestService:
     ) -> ToolResult:
         """Wait for an email to be received at the webhook's email address.
         
-        The email address format is: {token}@email.webhook.site
+        The email address format is: {token}@emailhook.site
         
         SMART BEHAVIOR: First checks for existing emails and returns immediately
         if any are found. Only waits/polls if no emails exist yet.
@@ -489,7 +493,7 @@ class RequestService:
             data={
                 "timeout": True,
                 "email": None,
-                "email_address": f"{webhook_token}@email.webhook.site"
+                "email_address": f"{webhook_token}@emailhook.site"
             }
         )
     
@@ -541,8 +545,11 @@ class RequestService:
         Returns:
             ToolResult with CSV content as text
         """
+        # Without per_page the export caps at the token's request_limit
+        # (<=10k). Passing per_page unlocks the documented 100k ceiling.
         response = await self._client.get_raw(
-            f"/token/{webhook_token}/requests/export"
+            f"/token/{webhook_token}/requests/export",
+            params={"per_page": 100_000},
         )
 
         csv_text = response.text
@@ -725,11 +732,11 @@ class RequestService:
         """
         data = await self._client.get(
             f"/token/{webhook_token}/requests",
-            params={"per_page": limit},
+            params={"per_page": limit, "sorting": "newest"},
         )
-        
+
         requests_data = data.get("data", [])
-        
+
         # Format each request with full details
         export_data = []
         for req in requests_data:

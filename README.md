@@ -291,7 +291,7 @@ dev, copy `.env.example` to `.env` and set the key there.
 {
   "token": "abc123-def456-...",
   "url": "https://webhook.site/abc123-def456-...",
-  "email": "abc123-def456-...@email.webhook.site",
+  "email": "abc123-def456-...@emailhook.site",
   "dns": "abc123-def456-....dnshook.site"
 }
 ```
@@ -330,7 +330,7 @@ dev, copy `.env.example` to `.env` and set the key there.
 | ------------- | ------------------------------ | --------------------------- |
 | **HTTP URL**  | `https://webhook.site/{token}` | Capture HTTP/HTTPS requests |
 | **Subdomain** | `https://{token}.webhook.site` | Alternative URL format      |
-| **Email**     | `{token}@email.webhook.site`   | Capture incoming emails     |
+| **Email**     | `{token}@emailhook.site`   | Capture incoming emails     |
 | **DNS**       | `{token}.dnshook.site`         | Capture DNS lookups         |
 
 ---

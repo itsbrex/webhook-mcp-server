@@ -421,7 +421,7 @@ TOOL_DEFINITIONS: list[Tool] = [
         title="Get Webhook Email Address",
         description=(
             "Return the unique email address for a webhook token "
-            "({token}@email.webhook.site). Emails sent to this address are captured "
+            "({token}@emailhook.site). Emails sent to this address are captured "
             "as requests on the webhook, complete with headers, body, and attachments. "
             "Use this for testing email-triggered workflows, magic-link auth flows, "
             "or email verification. Optionally validates the token first."
@@ -880,9 +880,10 @@ TOOL_DEFINITIONS: list[Tool] = [
         title="Wait for Incoming Request",
         description=(
             "Block until a new request arrives at the webhook, then return it. "
-            "Uses server-sent events (SSE) for efficient real-time streaming instead "
-            "of polling. Returns the full request details (method, headers, body, IP) "
-            "as soon as it arrives, or times out after the specified duration. "
+            "Returns immediately if a matching request already exists; otherwise "
+            "polls webhook.site until one arrives. Returns the full request details "
+            "(method, headers, body, IP) as soon as it arrives, or times out after "
+            "the specified duration. "
             "Use this after triggering a callback, webhook, or API integration to "
             "capture the resulting request."
         ),
@@ -912,9 +913,10 @@ TOOL_DEFINITIONS: list[Tool] = [
         name="wait_for_email",
         title="Wait for Incoming Email",
         description=(
-            "Block until an email arrives at {token}@email.webhook.site, then return it. "
-            "Uses server-sent events (SSE) for real-time delivery. Returns the email "
-            "subject, sender, body (text and HTML), and headers. "
+            "Block until an email arrives at {token}@emailhook.site, then return it. "
+            "Returns immediately if an email already exists; otherwise polls "
+            "webhook.site until one arrives. Returns the email subject, sender, "
+            "body (text and HTML), and headers. "
             "Optionally extracts all URLs from the email body, which is especially useful "
             "for capturing magic login links, verification URLs, or password-reset links. "
             "Times out after the specified duration if no email arrives."

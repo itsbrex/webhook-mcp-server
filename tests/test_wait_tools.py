@@ -33,7 +33,7 @@ async def test_wait_tools():
         
         token = result.data["token"]
         url = result.data["url"]
-        email = f"{token}@email.webhook.site"
+        email = f"{token}@emailhook.site"
         print(f"    Token: {token}")
         print(f"    URL: {url}")
         print(f"    Email: {email}")

@@ -214,7 +214,7 @@ class TestBugBountyTools:
         
         assert data["success"] is True, f"Failed: {data}"
         assert data["type"] == "email"
-        assert "@email.webhook.site" in data["canary"]["token"]
+        assert "@emailhook.site" in data["canary"]["token"]
 
 
 class TestExtractLinksFromRequest:

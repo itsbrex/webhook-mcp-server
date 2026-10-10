@@ -316,6 +316,7 @@ class ToolHandler:
     
     async def _handle_get_webhook_dns(self, arguments: dict[str, Any]):
         """Handle get_webhook_dns tool."""
+        self._validate_webhook_token(arguments["webhook_token"])
         return await self._webhook_service.get_dns(
             arguments["webhook_token"],
             validate=arguments.get("validate", False)

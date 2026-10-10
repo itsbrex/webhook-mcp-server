@@ -103,7 +103,7 @@ async def run_comprehensive_test():
         result = webhook_service.get_email(token)
         if print_result("get_webhook_email", result):
             passed += 1
-            expected_email = f"{token}@email.webhook.site"
+            expected_email = f"{token}@emailhook.site"
             if result.data["email"] == expected_email:
                 print(f"       Email correct: {result.data['email']}")
             else:

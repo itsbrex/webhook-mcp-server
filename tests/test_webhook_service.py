@@ -136,7 +136,7 @@ async def test_get_email():
         
         assert result.success is True
         assert result.data["token"] == "test-token-123"
-        assert result.data["email"] == "test-token-123@email.webhook.site"
+        assert result.data["email"] == "test-token-123@emailhook.site"
         assert result.data["url"] == "https://webhook.site/test-token-123"
 
 

@@ -47,7 +47,7 @@ class WebhookService:
             "url": f"{WEBHOOK_SITE_API}/{identifier}",
             "subdomain_url": f"https://{token}.webhook.site",
             "api_url": f"{WEBHOOK_SITE_API}/token/{token}",
-            "email": f"{token}@email.webhook.site",
+            "email": f"{token}@emailhook.site",
             "dns": f"{token}.dnshook.site",
         }
     
@@ -338,7 +338,7 @@ class WebhookService:
             if validation_error:
                 return validation_error
         
-        email = f"{webhook_token}@email.webhook.site"
+        email = f"{webhook_token}@emailhook.site"
         url = f"{WEBHOOK_SITE_API}/{webhook_token}"
         
         return ToolResult(
