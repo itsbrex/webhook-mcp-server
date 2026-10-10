@@ -1,5 +1,10 @@
 {
-  "load_variables_from": [],
+  "load_variables_from": [
+    {
+      "variable_loader_type": "dotenv",
+      "env_file_path": "/Users/hack/github/webhook-mcp-server/.env"
+    }
+  ],
   "manual_call_templates": [
     {
       "call_template_type": "mcp",
@@ -21,7 +26,7 @@
           }
         }
       },
-      "name": "webhook-site"
+      "name": "webhooksite"
     }
   ],
   "post_processing": [],
